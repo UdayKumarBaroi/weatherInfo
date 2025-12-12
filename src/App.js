@@ -26,9 +26,8 @@ export default function App() {
 
   useEffect(() => {
     fetchWeatherByCity(city);
-  }, []);
+  }, [city]); // dependencies fixed
 
-  // Fetch weather by city name
   async function fetchWeatherByCity(name) {
     try {
       setLoading(true);
@@ -63,7 +62,6 @@ export default function App() {
     }
   }
 
-  // Fetch weather by user location
   async function fetchWeatherByLocation() {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
@@ -78,7 +76,6 @@ export default function App() {
         const { latitude, longitude } = position.coords;
 
         try {
-          // Current Weather
           const curRes = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
           );
@@ -87,14 +84,12 @@ export default function App() {
           setCur(curJson);
           setCity(curJson.name);
 
-          // Forecast
           const fRes = await fetch(
             `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
           );
           const fJson = await fRes.json();
           setForecast(fJson.list.slice(0, 12));
 
-          // AQI
           await fetchAQI(latitude, longitude);
         } catch (e) {
           setError(e.message || "Failed to fetch");
@@ -112,7 +107,6 @@ export default function App() {
     );
   }
 
-  // Fetch AQI
   async function fetchAQI(lat, lon) {
     try {
       const res = await fetch(
@@ -125,7 +119,6 @@ export default function App() {
     }
   }
 
-  // AQI Label
   function getAqiLabel(a) {
     if (!a) return "N/A";
     switch (a) {
@@ -143,7 +136,6 @@ export default function App() {
     }
   }
 
-  // AQI Color based on PM2.5
   function aqiColor(pm25) {
     if (pm25 === null || pm25 === undefined) return "#fff";
     if (pm25 <= 12) return "#2dd4bf";
@@ -153,7 +145,6 @@ export default function App() {
     return "#ef4444";
   }
 
-  // Chart Data
   const chartData = {
     labels: forecast.map((f) =>
       new Date(f.dt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -188,9 +179,11 @@ export default function App() {
     },
   };
 
+  // Dew point calculation added
+  const dewPoint = cur ? calcDewPoint(cur.main.temp, cur.main.humidity) : null;
+
   return (
     <div className="app-root">
-      {/* Top Controls */}
       <div className="top-controls">
         <input
           className="city-input"
@@ -207,9 +200,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* Main Cards */}
       <section className="card-row">
-        {/* Left Card - Weather + Icon */}
         <div className="card left-card">
           <div className="location-row">
             <div>
@@ -230,7 +221,6 @@ export default function App() {
           <div className="big-temp">{cur ? Math.round(cur.main.temp) : "--"}°C</div>
         </div>
 
-        {/* Center Card - AQI + Secondary Data */}
         <div className="card center-card">
           <h3>Air Quality</h3>
           <div className="aqi-large">
@@ -250,8 +240,10 @@ export default function App() {
           <h3 style={{ marginTop: 16 }}>Details</h3>
           <div className="data-grid">
             <div className="data-item">
-              <b>Feels like</b>{" "}
-              <span>{cur ? Math.round(cur.main.feels_like) + "°C" : "—"}</span>
+              <b>Feels like</b> <span>{cur ? Math.round(cur.main.feels_like) + "°C" : "—"}</span>
+            </div>
+            <div className="data-item">
+              <b>Dew Point</b> <span>{dewPoint ? Math.round(dewPoint) + "°C" : "—"}</span>
             </div>
             <div className="data-item">
               <b>Humidity</b> <span>{cur ? cur.main.humidity + "%" : "—"}</span>
@@ -266,7 +258,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* Forecast Row */}
       <section className="forecast-row">
         {forecast.slice(0, 8).map((it, idx) => (
           <div className="forecast-item" key={idx}>
@@ -279,7 +270,6 @@ export default function App() {
         ))}
       </section>
 
-      {/* Full-width Graph */}
       <div className="graph-container">
         <Line data={chartData} options={chartOptions} />
       </div>
@@ -292,7 +282,7 @@ export default function App() {
   );
 }
 
-/* Utilities */
+// Dew point calculation
 function calcDewPoint(t, rh) {
   const a = 17.27,
     b = 237.7;
